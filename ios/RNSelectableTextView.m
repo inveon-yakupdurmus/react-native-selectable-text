@@ -167,6 +167,18 @@ UITextPosition* beginning;
     [_backedTextInputView select:self];
     [_backedTextInputView setSelectedRange:NSMakeRange(location, endLocation - location)];
 
+    //Dispatch
+    RCTTextSelection *selection = self.selection;
+    
+    NSUInteger start = selection.start;
+    NSUInteger end = selection.end - selection.start;
+    
+    self.onSelectionPosition(@{
+        @"content": [[self.attributedText string] substringWithRange:NSMakeRange(start, end)],
+        @"selectionStart": @(start),
+        @"selectionEnd": @(selection.end)
+    });
+
 }
 
 -(void) handleTap: (UITapGestureRecognizer *) gesture

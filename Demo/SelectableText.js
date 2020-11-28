@@ -1,5 +1,5 @@
-import React from 'react'
-import { Text, requireNativeComponent, Platform } from 'react-native'
+import React, { useState } from 'react'
+import { Text, requireNativeComponent, Platform, View } from 'react-native'
 import { v4 } from 'uuid'
 import memoize from 'fast-memoize'
 
@@ -11,7 +11,7 @@ const RNSelectableText = requireNativeComponent('RNSelectableText')
 const combineHighlights = memoize(numbers => {
   return numbers
     .sort((a, b) => a.start - b.start || a.end - b.end)
-    .reduce(function(combined, next) {
+    .reduce(function (combined, next) {
       if (!combined.length || combined[combined.length - 1].end < next.start) combined.push(next)
       else {
         var prev = combined.pop()
@@ -71,9 +71,14 @@ const mapHighlightsRanges = (value, highlights) => {
  * textComponentProps: object
  */
 export const SelectableText = ({
-  onSelection, onHighlightPress, textValueProp, value, TextComponent,
+  onSelection, onHighlightPress, textValueProp, value, TextComponent, onSelectionPosition, RenderActionBar,
   textComponentProps, ...props
 }) => {
+
+  let textPosition = null
+  const [timer, setTimer] = useState();
+  const [position, setPosition] = useState({ pageX: -100, pageY: -100 });
+
   const usesTextComponent = !TextComponent;
   TextComponent = TextComponent || Text;
   textValueProp = textValueProp || 'children';  // default to `children` which will render `value` as a child of `TextComponent`
@@ -83,23 +88,29 @@ export const SelectableText = ({
     onSelection && onSelection({ content, eventType, selectionStart, selectionEnd })
   }
 
+  const onSelectionPositionNative = ({
+    nativeEvent: { content, selectionStart, selectionEnd },
+  }) => {
+    textPosition = { content, selectionStart, selectionEnd }
+  }
+
   const onHighlightPressNative = onHighlightPress
     ? Platform.OS === 'ios'
       ? ({ nativeEvent: { clickedRangeStart, clickedRangeEnd } }) => {
-          if (!props.highlights || props.highlights.length === 0) return
+        if (!props.highlights || props.highlights.length === 0) return
 
-          const mergedHighlights = combineHighlights(props.highlights)
+        const mergedHighlights = combineHighlights(props.highlights)
 
-          const hightlightInRange = mergedHighlights.find(
-            ({ start, end }) => clickedRangeStart >= start - 1 && clickedRangeEnd <= end + 1,
-          )
+        const hightlightInRange = mergedHighlights.find(
+          ({ start, end }) => clickedRangeStart >= start - 1 && clickedRangeEnd <= end + 1,
+        )
 
-          if (hightlightInRange) {
-            onHighlightPress(hightlightInRange.id)
-          }
+        if (hightlightInRange) {
+          onHighlightPress(hightlightInRange.id)
         }
+      }
       : onHighlightPress
-    : () => {}
+    : () => { }
 
   // highlights feature is only supported if `TextComponent == Text`
   let textValue = value;
@@ -107,42 +118,67 @@ export const SelectableText = ({
     textValue = (
       props.highlights && props.highlights.length > 0
         ? mapHighlightsRanges(value, props.highlights).map(({ id, isHighlight, text }) => (
-            <Text
-              key={v4()}
-              selectable
-              style={
-                isHighlight
-                  ? {
-                      backgroundColor: props.highlightColor,
-                    }
-                  : {}
-              }
-              onPress={() => {
-                if (isHighlight) {
-                  onHighlightPress && onHighlightPress(id)
+          <Text
+            key={v4()}
+            selectable
+            style={
+              isHighlight
+                ? {
+                  backgroundColor: props.highlightColor,
                 }
-              }}
-            >
-              {text}
-            </Text>
-          ))
-      : [value]
+                : {}
+            }
+            onPress={() => {
+              if (isHighlight) {
+                onHighlightPress && onHighlightPress(id)
+              }
+            }}
+          >
+            {text}
+          </Text>
+        ))
+        : [value]
     );
     if (props.appendToChildren) {
       textValue.push(props.appendToChildren);
     }
   }
   return (
-    <RNSelectableText
-      {...props}
-      onHighlightPress={onHighlightPressNative}
-      selectable
-      onSelection={onSelectionNative}
+    <View
+      onTouchStart={(e) => {
+        setTimer((new Date).getTime())
+        setPosition({ pageX: -100, pageY: -100 })
+        textPosition = null
+      }}
+
+      onTouchEnd={(e) => {
+        if (!textPosition) return;
+        const time = (new Date).getTime()
+        if ((time - timer) > 500) {
+          setPosition({
+            pageX: e.nativeEvent.pageX,
+            pageY: e.nativeEvent.pageY
+          })
+          onSelectionPosition(textPosition)
+        }
+      }}
     >
-      <TextComponent
-        key={v4()}
-        {...{[textValueProp]: textValue, ...textComponentProps}}
-      />
-    </RNSelectableText>
+
+      <View style={{ position: 'absolute', backgroundColor: 'red', minWidth: 10, minHeight: 10, zIndex: 999, marginTop: position.pageY - 50, marginLeft: position.pageX }}>
+        {RenderActionBar && <RenderActionBar textPosition={textPosition} />}
+      </View>
+      <RNSelectableText
+        {...props}
+        onHighlightPress={onHighlightPressNative}
+        selectable
+        onSelection={onSelectionNative}
+        onSelectionPosition={onSelectionPositionNative}
+      >
+        <TextComponent
+          key={v4()}
+          {...{ [textValueProp]: textValue, ...textComponentProps }}
+        />
+      </RNSelectableText>
+    </View>
   )
 }
