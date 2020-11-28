@@ -10,14 +10,12 @@
 ```javascript
 import { SelectableText } from "@astrocoders/react-native-selectable-text";
 
-// Use normally, it is a drop-in replacement for react-native/Text
-<SelectableText
-  menuItems={["Foo", "Bar"]}
-  onSelectionPosition={{ content, selectionStart, selectionEnd }=>{}}
-  RenderActionBar={()=><MyComponent>}
-  onSelection={({ eventType, content, selectionStart, selectionEnd }) => {}}
-  value="I crave star damage"
-/>;
+
+      <SelectableText
+        RenderActionBar={() =><MyComponent/>}
+        onSelectionPosition={(props) =>  console.log("Position : ",props) }
+        value={"Lorem ipsum dolor sit amet, consectetur adipiscing elit."}
+      />
 ```
 
 

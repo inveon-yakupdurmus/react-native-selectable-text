@@ -71,7 +71,7 @@ const mapHighlightsRanges = (value, highlights) => {
  * textComponentProps: object
  */
 export const SelectableText = ({
-  onSelection, onHighlightPress, textValueProp, value, TextComponent, onSelectionPosition, RenderActionBar,
+  onSelection, onHighlightPress,menuItems, textValueProp, value, TextComponent, onSelectionPosition, RenderActionBar,
   textComponentProps, ...props
 }) => {
 
@@ -171,6 +171,7 @@ export const SelectableText = ({
         {...props}
         onHighlightPress={onHighlightPressNative}
         selectable
+        menuItems={menuItems ? menuItems : []}
         onSelection={onSelectionNative}
         onSelectionPosition={onSelectionPositionNative}
       >
